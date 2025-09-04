@@ -1,0 +1,445 @@
+<!doctype html>
+<html lang="hi">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>NeonArcade – खेलो और जीतों!</title>
+  <meta name="description" content="एक दमदार, एकल‑फाइल गेमिंग वेबसाइट—Snake, Tic‑Tac‑Toe, और Memory जैसे मिनी‑गेम्स के साथ। हाई‑स्कोर, थीम टॉगल, और ऑफलाइन‑फ्रेंडली डिज़ाइन." />
+  <style>
+    :root{
+      --bg:#0b0f1a; --panel:#0f1424; --text:#e6eeff; --muted:#96a0b7;
+      --brand:#7c4dff; --brand2:#00e5ff; --danger:#ff5252; --success:#00e676; --warn:#ffd740;
+      --card:#121935; --glass:rgba(255,255,255,.06); --border:rgba(255,255,255,.12);
+      --shadow:0 10px 30px rgba(0,0,0,.45), inset 0 0 0 1px var(--border);
+    }
+    *{box-sizing:border-box}
+    html,body{height:100%}
+    body{margin:0;font-family:system-ui,-apple-system,Segoe UI,Roboto,Ubuntu,"Noto Sans",sans-serif;background:radial-gradient(1200px 600px at 10% 0%,rgba(124,77,255,.25),transparent 60%),radial-gradient(900px 500px at 90% 10%,rgba(0,229,255,.12),transparent 60%),var(--bg);color:var(--text)}
+    a{color:inherit;text-decoration:none}
+    .container{max-width:1100px;margin:auto;padding:24px}
+    header{
+      position:sticky;top:0;z-index:50;background:linear-gradient(180deg,var(--bg),rgba(11,15,26,.7));backdrop-filter:blur(8px);border-bottom:1px solid var(--border)
+    }
+    .nav{display:flex;align-items:center;gap:12px;justify-content:space-between;padding:16px 24px}
+    .brand{display:flex;align-items:center;gap:10px;font-weight:800;letter-spacing:.3px}
+    .logo{width:34px;height:34px;border-radius:12px;background:conic-gradient(from 180deg at 50% 50%, var(--brand), var(--brand2), var(--brand));box-shadow:0 0 30px rgba(124,77,255,.35)}
+    .btn{display:inline-flex;align-items:center;gap:8px;border:1px solid var(--border);background:var(--glass);padding:10px 14px;border-radius:14px;color:var(--text);cursor:pointer;transition:.2s ease;box-shadow:var(--shadow)}
+    .btn:hover{transform:translateY(-1px);border-color:rgba(255,255,255,.2)}
+    .btn.primary{background:linear-gradient(90deg,rgba(124,77,255,.25),rgba(0,229,255,.18));border-color:rgba(124,77,255,.5)}
+
+    .hero{padding:56px 24px 24px;display:grid;grid-template-columns:1.15fr .85fr;gap:24px;align-items:center}
+    .hero .card{padding:28px;border-radius:20px;background:linear-gradient(180deg,rgba(255,255,255,.04),rgba(255,255,255,.02));box-shadow:var(--shadow)}
+    .title{font-size:clamp(28px,4.2vw,46px);line-height:1.1;margin:0 0 8px}
+    .subtitle{color:var(--muted);margin:0 0 16px}
+    .badges{display:flex;gap:8px;flex-wrap:wrap;margin:12px 0 18px}
+    .badge{font-size:.85rem;padding:6px 10px;border-radius:20px;border:1px solid var(--border);background:var(--glass)}
+    .glow{filter:drop-shadow(0 0 18px rgba(124,77,255,.45))}
+
+    .games{display:grid;grid-template-columns:repeat(3,1fr);gap:18px;margin:26px 0}
+    @media (max-width:900px){.hero{grid-template-columns:1fr}.games{grid-template-columns:repeat(2,1fr)}}
+    @media (max-width:620px){.games{grid-template-columns:1fr}}
+
+    .game-card{position:relative;overflow:hidden;border-radius:20px;background:var(--card);border:1px solid var(--border);box-shadow:var(--shadow);display:flex;flex-direction:column}
+    .game-thumb{height:160px;background:linear-gradient(120deg,rgba(124,77,255,.25),transparent),radial-gradient(400px 160px at 80% 20%,rgba(0,229,255,.18),transparent 60%),linear-gradient(180deg,rgba(255,255,255,.06),rgba(255,255,255,.02))}
+    .game-body{padding:16px}
+    .game-title{font-weight:700;margin:0 0 6px}
+    .muted{color:var(--muted)}
+
+    .panel{padding:16px;border:1px solid var(--border);border-radius:16px;background:var(--glass);box-shadow:var(--shadow)}
+
+    /* Modal */
+    .overlay{position:fixed;inset:0;background:rgba(6,8,14,.6);backdrop-filter:blur(6px);display:none;align-items:center;justify-content:center;z-index:100}
+    .overlay.show{display:flex}
+    .modal{width:min(920px,96vw);max-height:92vh;overflow:auto;border-radius:22px;background:var(--panel);border:1px solid var(--border);box-shadow:var(--shadow);padding:18px}
+    .modal-head{display:flex;align-items:center;justify-content:space-between;gap:10px;border-bottom:1px solid var(--border);padding-bottom:10px;margin-bottom:12px}
+    .modal-title{font-weight:800}
+    .modal-body{padding:8px}
+
+    /* Game areas */
+    .center{display:flex;align-items:center;justify-content:center}
+    canvas{background:#060913;border-radius:12px;border:1px solid var(--border)}
+
+    /* TicTacToe */
+    .ttt{display:grid;grid-template-columns:repeat(3,110px);gap:10px;justify-content:center}
+    .cell{width:110px;height:110px;display:flex;align-items:center;justify-content:center;font-size:48px;font-weight:900;border-radius:14px;background:rgba(255,255,255,.03);border:1px solid var(--border);cursor:pointer;user-select:none}
+    .cell.win{outline:2px solid var(--success);box-shadow:0 0 25px rgba(0,230,118,.25)}
+
+    /* Memory */
+    .memory{display:grid;grid-template-columns:repeat(4,90px);gap:10px;justify-content:center}
+    .card{width:90px;height:110px;perspective:800px}
+    .card-inner{position:relative;width:100%;height:100%;transform-style:preserve-3d;transition:transform .35s}
+    .card.flip .card-inner{transform:rotateY(180deg)}
+    .face{position:absolute;inset:0;border-radius:12px;display:flex;align-items:center;justify-content:center;border:1px solid var(--border);backface-visibility:hidden}
+    .front{background:linear-gradient(180deg,rgba(255,255,255,.06),rgba(255,255,255,.03))}
+    .back{transform:rotateY(180deg);background:linear-gradient(135deg, rgba(124,77,255,.2), rgba(0,229,255,.2))}
+
+    footer{padding:24px;border-top:1px solid var(--border);color:var(--muted);text-align:center}
+  </style>
+</head>
+<body>
+  <header>
+    <nav class="nav container">
+      <div class="brand"><span class="logo"></span> <span>NeonArcade</span></div>
+      <div style="display:flex;gap:10px;align-items:center">
+        <button id="openLeaderboard" class="btn">🏆 लीडरबोर्ड</button>
+        <button id="themeBtn" class="btn">🌙 थीम</button>
+        <a class="btn primary" href="#games">🎮 खेल शुरू करें</a>
+      </div>
+    </nav>
+  </header>
+
+  <main class="container">
+    <section class="hero">
+      <div class="card">
+        <h1 class="title glow">सबसे अलग, तेज़ और मज़ेदार <span style="color:var(--brand2)">Arcade</span>!</h1>
+        <p class="subtitle">एक ही पेज में कई मिनी‑गेम्स। कोई इंस्टॉल नहीं—खोलो और खेलो। हाई‑स्कोर सेव, तेज़ परफॉर्मेंस, और नीयॉन‑ग्लो लुक।</p>
+        <div class="badges">
+          <span class="badge">⚡ Ultra‑Light</span>
+          <span class="badge">🧠 स्मार्ट CPU</span>
+          <span class="badge">💾 Local High‑Scores</span>
+          <span class="badge">📱 100% Responsive</span>
+        </div>
+        <div style="display:flex;gap:10px">
+          <a class="btn primary" href="#games">अभी खेलें</a>
+          <button class="btn" id="howBtn">कैसे चलाएँ?</button>
+        </div>
+      </div>
+      <div class="panel">
+        <h3 style="margin:0 0 8px">⚙️ हाइलाइट्स</h3>
+        <ul style="margin:0 0 6px 18px;line-height:1.5">
+          <li>एकल‑फाइल साइट (index.html) — किसी भी ब्राउज़र में ऑफलाइन चलेगी।</li>
+          <li>Snake (कैनवास), Tic‑Tac‑Toe (मानव बनाम CPU), Memory Match (4×4)।</li>
+          <li>लीडरबोर्ड: हाई‑स्कोर/बेस्ट टाइम लोकलStorage में सुरक्षित।</li>
+          <li>थीम टॉगल और यूनिक नीयॉन‑ग्लो डिज़ाइन।</li>
+        </ul>
+        <small class="muted">टिप: फाइल सेव करके डबल‑क्लिक करें — Chrome/Edge/Brave में तुरंत चलेगी।</small>
+      </div>
+    </section>
+
+    <h2 id="games" style="margin:10px 0 8px">🎯 गेम्स</h2>
+    <div class="games">
+      <article class="game-card">
+        <div class="game-thumb"></div>
+        <div class="game-body">
+          <h3 class="game-title">Snake</h3>
+          <p class="muted">खाओ, बढ़ो, दीवार और खुद से बचो। हाई‑स्कोर बनाओ!</p>
+          <div style="display:flex;gap:8px;margin-top:8px">
+            <button class="btn primary" data-open="snake">Play Snake</button>
+            <button class="btn" data-open="snake-info">नियम</button>
+          </div>
+        </div>
+      </article>
+      <article class="game-card">
+        <div class="game-thumb"></div>
+        <div class="game-body">
+          <h3 class="game-title">Tic‑Tac‑Toe</h3>
+          <p class="muted">आप बनाम CPU — क्या आप इसे हरा सकते हैं?</p>
+          <div style="display:flex;gap:8px;margin-top:8px">
+            <button class="btn primary" data-open="ttt">Play TTT</button>
+            <button class="btn" data-open="ttt-info">नियम</button>
+          </div>
+        </div>
+      </article>
+      <article class="game-card">
+        <div class="game-thumb"></div>
+        <div class="game-body">
+          <h3 class="game-title">Memory Match</h3>
+          <p class="muted">जोड़ी ढूँढो—कम चालें, कम समय, ज्यादा स्कोर।</p>
+          <div style="display:flex;gap:8px;margin-top:8px">
+            <button class="btn primary" data-open="memory">Play Memory</button>
+            <button class="btn" data-open="memory-info">नियम</button>
+          </div>
+        </div>
+      </article>
+    </div>
+
+    <section class="panel" id="how">
+      <h3 style="margin:0 0 6px">🛠️ चलाने का आसान तरीका</h3>
+      <ol style="margin:0 0 0 18px;line-height:1.6">
+        <li>ऊपर की फाइल को <strong>index.html</strong> नाम से सेव करें।</li>
+        <li>Windows 10 में फाइल पर डबल‑क्लिक करें — आपका डिफॉल्ट ब्राउज़र खुलेगा।</li>
+        <li>मोबाइल पर भी चल जाएगा: फाइल को फोन में कॉपी करके ब्राउज़र से खोलें।</li>
+      </ol>
+    </section>
+  </main>
+
+  <footer>
+    © <span id="yr"></span> NeonArcade • Built for fun.
+  </footer>
+
+  <!-- Overlay/Modal -->
+  <div class="overlay" id="overlay">
+    <div class="modal" role="dialog" aria-modal="true" aria-labelledby="modalTitle">
+      <div class="modal-head">
+        <div class="modal-title" id="modalTitle">Modal</div>
+        <div style="display:flex;gap:8px;align-items:center">
+          <button class="btn" id="saveScoreBtn" title="स्कोर सेव करें">💾 सेव</button>
+          <button class="btn" id="closeModal">✖ बंद</button>
+        </div>
+      </div>
+      <div class="modal-body" id="modalBody"></div>
+    </div>
+  </div>
+
+  <script>
+  const $ = s=>document.querySelector(s);
+  const $$ = s=>Array.from(document.querySelectorAll(s));
+  const overlay = $('#overlay');
+  const modalTitle = $('#modalTitle');
+  const modalBody = $('#modalBody');
+  const saveBtn = $('#saveScoreBtn');
+  const yrEl = $('#yr'); yrEl.textContent = new Date().getFullYear();
+
+  const state = {
+    currentGame: null,
+    lastScore: null,
+  };
+
+  const storage = {
+    get(k, d){ try{ return JSON.parse(localStorage.getItem(k)) ?? d }catch(e){return d}},
+    set(k, v){ localStorage.setItem(k, JSON.stringify(v)) },
+  };
+
+  // Theme toggle
+  const themeBtn = $('#themeBtn');
+  themeBtn.addEventListener('click', ()=>{
+    document.body.classList.toggle('light');
+    if(document.body.classList.contains('light')){
+      document.documentElement.style.setProperty('--bg','#fbfbfe');
+      document.documentElement.style.setProperty('--panel','#ffffff');
+      document.documentElement.style.setProperty('--text','#0a0d18');
+      document.documentElement.style.setProperty('--muted','#495265');
+      document.documentElement.style.setProperty('--card','#f2f4ff');
+    }else{
+      document.location.reload(); // quick reset to default vars
+    }
+  });
+
+  // Generic modal helpers
+  function openModal(title, content, gameKey=null){
+    modalTitle.textContent = title;
+    modalBody.innerHTML = '';
+    if(typeof content === 'string') modalBody.innerHTML = content; else modalBody.append(content);
+    overlay.classList.add('show');
+    state.currentGame = gameKey;
+    state.lastScore = null;
+    saveBtn.style.display = gameKey ? 'inline-flex' : 'none';
+  }
+  $('#closeModal').addEventListener('click', ()=> overlay.classList.remove('show'));
+  overlay.addEventListener('click', e=>{ if(e.target===overlay) overlay.classList.remove('show') });
+
+  // Leaderboard View
+  $('#openLeaderboard').addEventListener('click', ()=>{
+    const board = storage.get('neonarcade.board', {snake:0, ttt:{wins:0}, memory:{bestTime:null, bestMoves:null}});
+    const wrap = document.createElement('div');
+    wrap.innerHTML = `
+      <div class="panel">
+        <h3 style="margin:0 0 8px">🏆 लीडरबोर्ड</h3>
+        <ul style="margin:0 0 0 18px;line-height:1.7">
+          <li>Snake हाई‑स्कोर: <strong>${board.snake||0}</strong></li>
+          <li>TTT जीत (CPU के खिलाफ): <strong>${(board.ttt&&board.ttt.wins)||0}</strong></li>
+          <li>Memory बेस्ट टाइम: <strong>${board.memory?.bestTime? board.memory.bestTime+'s' : '—'}</strong>, बेस्ट मूव्स: <strong>${board.memory?.bestMoves ?? '—'}</strong></li>
+        </ul>
+      </div>`;
+    openModal('लीडरबोर्ड', wrap);
+  });
+
+  // How to run
+  $('#howBtn').addEventListener('click', ()=>{
+    openModal('कैसे चलाएँ?', `<div class="panel"><ol style="margin:0 0 0 18px;line-height:1.7"><li>ऊपर के पूरे कोड को कॉपी करके <b>index.html</b> के रूप में सेव करें।</li><li>डबल‑क्लिक करके ब्राउज़र में खोलें।</li><li>अगर चाहें तो किसी भी होस्टिंग (Netlify, GitHub Pages) पर अपलोड करें।</li></ol></div>`);
+  });
+
+  // Save score
+  saveBtn.addEventListener('click', ()=>{
+    if(!state.currentGame) return;
+    const board = storage.get('neonarcade.board', {snake:0, ttt:{wins:0}, memory:{bestTime:null, bestMoves:null}});
+    if(state.currentGame==='snake'){
+      if(typeof state.lastScore === 'number' && state.lastScore > (board.snake||0)) board.snake = state.lastScore;
+    }
+    if(state.currentGame==='ttt'){
+      if(state.lastScore==='win'){ board.ttt = {wins: (board.ttt?.wins||0)+1}; }
+    }
+    if(state.currentGame==='memory'){
+      const {time, moves} = state.lastScore||{};
+      if(time!=null && (board.memory.bestTime==null || time<board.memory.bestTime)) board.memory.bestTime=time;
+      if(moves!=null && (board.memory.bestMoves==null || moves<board.memory.bestMoves)) board.memory.bestMoves=moves;
+    }
+    storage.set('neonarcade.board', board);
+    alert('स्कोर सेव हो गया!');
+  });
+
+  // Attach card buttons
+  $$('[data-open]')?.forEach(btn=>{
+    btn.addEventListener('click', ()=>{
+      const key = btn.getAttribute('data-open');
+      if(key==='snake') startSnake();
+      if(key==='ttt') startTTT();
+      if(key==='memory') startMemory();
+      if(key==='snake-info') openModal('Snake नियम', `<div class="panel"><ul style="margin:0 0 0 18px;line-height:1.7"><li>एरो keys से नियंत्रित करें।</li><li>खाना खाएँ, लंबाई बढ़ाएँ।</li><li>दीवार या अपनी बॉडी से टकराएँगे तो गेम ओवर।</li></ul></div>`);
+      if(key==='ttt-info') openModal('Tic‑Tac‑Toe नियम', `<div class="panel"><ul style="margin:0 0 0 18px;line-height:1.7"><li>3×3 ग्रिड में X/O लगाएँ।</li><li>CPU मिनी‑मैक्स आधारित स्मार्ट मूव्स करता है।</li><li>पहले तीन एक लाइन में = जीत!</li></ul></div>`);
+      if(key==='memory-info') openModal('Memory नियम', `<div class="panel"><ul style="margin:0 0 0 18px;line-height:1.7"><li>कार्ड पलटें और जोड़ी मिलाएँ।</li><li>कम चालें और कम समय बेहतर स्कोर है।</li></ul></div>`);
+    });
+  });
+
+  // ===== SNAKE =====
+  function startSnake(){
+    const wrap = document.createElement('div');
+    wrap.innerHTML = `<div style="display:flex;gap:12px;align-items:center;justify-content:space-between;margin-bottom:8px"><div>स्कोर: <b id="snScore">0</b> • हाई: <b id="snHigh">${storage.get('neonarcade.board',{snake:0}).snake||0}</b></div><div><button class="btn" id="snReset">🔄 री‑स्टार्ट</button></div></div>`;
+    const cv = document.createElement('canvas'); cv.width=420; cv.height=420; wrap.appendChild(cv);
+    openModal('Snake', wrap, 'snake');
+
+    const ctx = cv.getContext('2d');
+    const grid=20; let vx=1, vy=0; let snake=[{x:10,y:10}]; let food=spawn(); let score=0; let speed=120; let dead=false; let tickId;
+    function spawn(){ return {x: Math.floor(Math.random()* (cv.width/grid)), y: Math.floor(Math.random()* (cv.height/grid))} }
+
+    function drawRect(x,y,c){ ctx.fillStyle=c; ctx.fillRect(x*grid+1,y*grid+1,grid-2,grid-2) }
+
+    function loop(){
+      tickId = setTimeout(()=>{ requestAnimationFrame(loop) }, speed);
+      if(dead) return;
+      // move
+      const head = {x: snake[0].x + vx, y: snake[0].y + vy};
+      // wrap around walls for more fun (or comment for hard walls)
+      head.x = (head.x + (cv.width/grid)) % (cv.width/grid);
+      head.y = (head.y + (cv.height/grid)) % (cv.height/grid);
+      // collision with body
+      if(snake.some((s,i)=> i>0 && s.x===head.x && s.y===head.y)) { gameOver(); return }
+      snake.unshift(head);
+      // eat
+      if(head.x===food.x && head.y===food.y){ score++; $('#snScore').textContent=score; food=spawn(); speed = Math.max(60, speed-3); }
+      else snake.pop();
+      // draw
+      ctx.clearRect(0,0,cv.width,cv.height);
+      // grid glow
+      for(let y=0;y<cv.height/grid;y++) for(let x=0;x<cv.width/grid;x++){
+        ctx.fillStyle = (x+y)%2? 'rgba(124,77,255,.08)' : 'rgba(0,229,255,.06)';
+        ctx.fillRect(x*grid,y*grid,grid,grid);
+      }
+      snake.forEach((s,i)=> drawRect(s.x,s.y, i? 'rgba(255,255,255,.9)' : '#7c4dff'));
+      drawRect(food.x, food.y, '#00e5ff');
+    }
+
+    function gameOver(){ dead=true; state.lastScore=score; clearTimeout(tickId); alert('गेम ओवर! स्कोर: '+score) }
+
+    document.addEventListener('keydown', handleKey);
+    function handleKey(e){
+      if(e.key==='ArrowLeft' && vx!==1){vx=-1;vy=0}
+      if(e.key==='ArrowRight' && vx!==-1){vx=1;vy=0}
+      if(e.key==='ArrowUp' && vy!==1){vx=0;vy=-1}
+      if(e.key==='ArrowDown' && vy!==-1){vx=0;vy=1}
+    }
+    $('#snReset').onclick=()=>{ clearTimeout(tickId); vx=1;vy=0;snake=[{x:10,y:10}];food=spawn();score=0;speed=120;dead=false;$('#snScore').textContent=0; loop(); };
+
+    loop();
+  }
+
+  // ===== TIC TAC TOE (with simple minimax) =====
+  function startTTT(){
+    const wrap = document.createElement('div');
+    const info = document.createElement('div'); info.style.margin='0 0 10px';
+    info.innerHTML = 'आप: <b>X</b> • CPU: <b>O</b> — पहले तीन एक लाइन में!';
+    const boardEl = document.createElement('div'); boardEl.className='ttt';
+    const ctrl = document.createElement('div'); ctrl.style.margin='10px 0';
+    ctrl.innerHTML = '<button class="btn" id="tttReset">🔄 नई गेम</button>';
+    wrap.append(info, boardEl, ctrl);
+    openModal('Tic‑Tac‑Toe (CPU)', wrap, 'ttt');
+
+    let board = Array(9).fill(null); let player='X'; let over=false;
+
+    function render(){
+      boardEl.innerHTML='';
+      board.forEach((v,i)=>{
+        const c=document.createElement('div'); c.className='cell'; c.textContent=v||''; c.addEventListener('click',()=>move(i)); boardEl.appendChild(c);
+      });
+    }
+    function move(i){ if(over||board[i])return; board[i]=player; player='O'; check(); cpu(); }
+    function cpu(){ if(over) return; const i = bestMove(board); if(i!=null){ board[i]='O'; player='X'; check(); render(); } else render(); }
+
+    function lines(){ return [[0,1,2],[3,4,5],[6,7,8],[0,3,6],[1,4,7],[2,5,8],[0,4,8],[2,4,6]] }
+    function winner(b){ for(const [a,c,d] of lines()){ if(b[a]&&b[a]===b[c]&&b[a]===b[d]) return b[a]; } return b.every(Boolean)?'draw':null }
+
+    function check(){
+      const w = winner(board);
+      if(w){ over=true; highlight();
+        if(w==='X'){ state.lastScore='win'; alert('आप जीत गए!'); }
+        else if(w==='O'){ state.lastScore='lose'; alert('CPU जीत गया!'); }
+        else { state.lastScore='draw'; alert('मैच ड्रॉ!'); }
+      }
+    }
+    function highlight(){
+      const wline = lines().find(([a,c,d])=> board[a]&&board[a]===board[c]&&board[a]===board[d]);
+      if(!wline) return; $$('.cell').forEach((el,idx)=>{ if(wline.includes(idx)) el.classList.add('win') });
+    }
+
+    function bestMove(b){
+      // minimax (depth‑limited for speed)
+      let best=-Infinity, moveIdx=null;
+      for(let i=0;i<9;i++) if(!b[i]){ b[i]='O'; let val = miniMax(b,false,0); b[i]=null; if(val>best){best=val;moveIdx=i} }
+      return moveIdx;
+    }
+    function scoreEval(w,depth){ if(w==='O') return 10-depth; if(w==='X') return depth-10; return 0 }
+    function miniMax(b,isMax,depth){
+      const w = winner(b); if(w) return scoreEval(w,depth); if(depth>4) return 0; // limit
+      if(isMax){
+        let best=-Infinity; for(let i=0;i<9;i++) if(!b[i]){ b[i]='O'; best=Math.max(best, miniMax(b,false,depth+1)); b[i]=null }
+        return best;
+      } else {
+        let best=Infinity; for(let i=0;i<9;i++) if(!b[i]){ b[i]='X'; best=Math.min(best, miniMax(b,true,depth+1)); b[i]=null }
+        return best;
+      }
+    }
+
+    $('#tttReset').onclick=()=>{ board=Array(9).fill(null); player='X'; over=false; render(); };
+    render();
+  }
+
+  // ===== MEMORY MATCH =====
+  function startMemory(){
+    const wrap=document.createElement('div');
+    const stats=document.createElement('div'); stats.style.margin='0 0 8px';
+    stats.innerHTML='चालें: <b id="mmMoves">0</b> • समय: <b id="mmTime">0</b>s';
+    const grid=document.createElement('div'); grid.className='memory';
+    const ctrl=document.createElement('div'); ctrl.style.margin='10px 0'; ctrl.innerHTML='<button class="btn" id="mmReset">🔄 री‑स्टार्ट</button>';
+    wrap.append(stats, grid, ctrl);
+    openModal('Memory Match (4×4)', wrap, 'memory');
+
+    let icons = ['🍎','🍋','🍇','🍉','🍒','🥝','🍌','🍓'];
+    let deck = shuffle([...icons,...icons]).map(v=>({v,open:false,done:false}));
+    let first=null, second=null, moves=0, time=0, timer=null, donePairs=0;
+
+    function shuffle(a){ for(let i=a.length-1;i>0;i--){ const j=Math.floor(Math.random()*(i+1)); [a[i],a[j]]=[a[j],a[i]] } return a }
+
+    function render(){
+      grid.innerHTML='';
+      deck.forEach((card,idx)=>{
+        const el=document.createElement('div'); el.className='card'+(card.open||card.done?' flip':'');
+        const inner=document.createElement('div'); inner.className='card-inner';
+        const front=document.createElement('div'); front.className='face front'; front.textContent='?';
+        const back=document.createElement('div'); back.className='face back'; back.textContent=card.v;
+        inner.append(front, back); el.append(inner); grid.append(el);
+        el.addEventListener('click', ()=> click(idx, el));
+      });
+      $('#mmMoves').textContent=moves; $('#mmTime').textContent=time;
+    }
+
+    function click(i, el){
+      if(timer==null){ timer=setInterval(()=>{ time++; $('#mmTime').textContent=time },1000) }
+      if(deck[i].done || deck[i].open) return;
+      if(second!=null) return; // wait resolution
+      deck[i].open=true; render();
+      if(first==null){ first=i; return; }
+      second=i; moves++; $('#mmMoves').textContent=moves;
+      if(deck[first].v===deck[second].v){ deck[first].done=deck[second].done=true; first=second=null; donePairs++; if(donePairs===icons.length) win(); }
+      else setTimeout(()=>{ deck[first].open=deck[second].open=false; first=second=null; render(); },700);
+    }
+
+    function win(){ clearInterval(timer); state.lastScore={time, moves}; alert(`शानदार! समय: ${time}s • चालें: ${moves}`); }
+
+    $('#mmReset').onclick=()=>{ clearInterval(timer); time=0;moves=0;first=second=null;donePairs=0; deck=shuffle([...icons,...icons]).map(v=>({v,open:false,done:false})); render(); };
+
+    render();
+  }
+
+  </script>
+</body>
+</html>
